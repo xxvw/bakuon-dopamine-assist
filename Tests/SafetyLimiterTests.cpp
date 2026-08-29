@@ -121,6 +121,9 @@ private:
         beginTest("Independent 16x reference stays within Ceiling +0.05 dBTP");
         const std::array<double, 4> sampleRates { 44100.0, 48000.0, 96000.0, 192000.0 };
         const auto allowed = bakuon::dsp::decibelsToLinear(-0.95);
+        double worstMeasured = 0.0;
+        double worstSampleRate = 0.0;
+        std::size_t worstSignalIndex = 0;
 
         for (const auto sampleRate : sampleRates)
         {
@@ -169,6 +172,13 @@ private:
                     result.output,
                     2);
 
+                if (measured > worstMeasured)
+                {
+                    worstMeasured = measured;
+                    worstSampleRate = sampleRate;
+                    worstSignalIndex = signalIndex;
+                }
+
                 expect(measured <= allowed,
                        "Fs=" + juce::String(sampleRate, 0)
                        + ", signal=" + juce::String(static_cast<int>(signalIndex))
@@ -177,6 +187,11 @@ private:
                        + " dBTP; limit is -0.95 dBTP");
             }
         }
+
+        logMessage("Worst independent 16x output: "
+                   + juce::String(bakuon::dsp::linearToDecibels(worstMeasured), 4)
+                   + " dBTP (Fs=" + juce::String(worstSampleRate, 0)
+                   + ", signal=" + juce::String(static_cast<int>(worstSignalIndex)) + ")");
     }
 
     void testFloatingPointHeadroomAndNumericSafety()
