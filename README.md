@@ -18,6 +18,7 @@
 - Auto Releaseおよび20〜500 ms固定Release
 - latency-aligned smooth bypass
 - Input Sample Peak、Input/Output True Peak、Gain Reduction meter
+- 日本語UI、30 Hzメーター表示、保護状態と強い抑制の色分け警告
 - versioned parameter state
 - DSP unit / conformance tests
 
@@ -89,7 +90,14 @@ ctest --preset mac-debug-arm64 --output-on-failure
 ctest --preset mac-release-arm64 --output-on-failure
 ```
 
-DSP testは、silence、透明性、Inter-sample Peak、4x/8x、lookahead、stereo link、+18 dBFS floating input、NaN/Inf、bypass、reset、対応sample rates、irregular block-size準備、独立16x referenceによるCeiling精度を対象にします。
+DSP testは、silence、透明性、Inter-sample Peak、4x/8x、lookahead、stereo link、+18 dBFS floating input、NaN/Inf、bypass、reset、対応sample rates、irregular block-size準備、独立16x referenceによるCeiling精度を対象にします。UI testは実際のJUCE editorを900×620のPNGへ描画し、日本語を含む画面生成が成功することを確認します。
+
+UI snapshotを個別に確認する場合:
+
+```bash
+cmake --build --preset mac-debug-arm64 --target RemixSafeMasterUISnapshot
+build/mac-debug-arm64/Tests/RemixSafeMasterUISnapshot_artefacts/Debug/RemixSafeMasterUISnapshot /tmp/remix-safe-master-ui.png
+```
 
 ## 検証結果
 
