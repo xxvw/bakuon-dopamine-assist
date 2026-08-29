@@ -1,0 +1,28 @@
+# Requirement documents
+*.docx
+
+# macOS
+.DS_Store
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# CMake build directories
+build/
+build-*/
+cmake-build-*/
+
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Visual Studio
+.vs/
+out/
+
+# Audio plugin build artifacts
+*.vst3/
+*.component/
