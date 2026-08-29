@@ -40,7 +40,7 @@ output
 - `Metering`: audio threadからGUIへのatomic snapshot
 - `Parameters`: APVTS parameter layoutとraw atomic pointer
 - `PluginProcessor`: host buffer、latency、state、DSPの接続
-- `PluginEditor`: parameter attachmentとmeter表示のみ。DSPロジックを持たない
+- `PluginEditor`: 日本語の操作UI、parameter attachment、meter animation、保護状態表示。DSPロジックを持たない
 
 ## Oversampling / True Peak detection
 
@@ -87,6 +87,12 @@ MVPは100% Stereo Link固定。各oversampled時点でL/Rの絶対値最大か�
 ## Metering
 
 block内では通常の数値としてInput Sample Peak、Input True Peak、Output Sample Peak、Output True Peak、current/peak Gain Reductionを集計する。block終了時にatomicへ1回publishし、GUIは30 Hz Timerから読む。audio threadとGUIの間にmutexはない。
+
+## UI
+
+操作は「入力ドライブ → 出力上限 → 戻り時間 → 検出精度」の順に並べ、日本語の動詞で目的を補足する。色は入力をmagenta、出口保護をcyan、時間とGain Reductionをyellow、安全状態をgreen、保護停止をredへ固定し、装飾だけでなく意味の手掛かりとして使う。通常・強い抑制・保護停止を下部status stripで常時表示し、Auto Release中は手動Releaseを無効化して操作の矛盾を防ぐ。
+
+文字列リテラルはJUCEへUTF-8として明示変換し、macOSでは日本語グリフを持つHiragino Sansを指定する。背景、発光、ノブ、meterはJUCEで手続き描画するため、外部bitmapへ依存せずリサイズとHiDPI表示に追従する。UI snapshot targetは実際のeditorをoffscreen PNGへ描画し、文字とlayoutの目視回帰確認に使う。
 
 ## Realtime safety
 
