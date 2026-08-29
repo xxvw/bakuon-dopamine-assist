@@ -47,6 +47,9 @@ private:
 
     RemixSafeMasterAudioProcessor& processorReference;
     std::unique_ptr<DopamineLookAndFeel> dopamineLookAndFeel;
+    juce::Image backgroundArtwork;
+    juce::Image protectionCoreArtwork;
+    juce::Image spectrumArtwork;
 
     juce::Label productBadge;
     juce::Label title;
@@ -71,7 +74,6 @@ private:
     juce::Label outputTruePeakMeter;
     juce::Label gainReductionMeter;
     juce::Label characterWarning;
-    juce::Label footerHint;
     juce::TooltipWindow tooltipWindow;
 
     std::unique_ptr<SliderAttachment> inputTrimAttachment;

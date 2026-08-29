@@ -11,6 +11,14 @@ option(BAKUON_BUILD_TESTS "Build DSP and plug-in unit tests" ON)
 
 add_subdirectory(third_party/JUCE)
 
+juce_add_binary_data(RemixSafeMasterAssets
+    HEADER_NAME RemixSafeMasterAssets.h
+    NAMESPACE RemixSafeMasterAssets
+    SOURCES
+        Assets/UI/limiter_background.png
+        Assets/UI/spectrum_divider.png
+        Assets/UI/true_peak_core.png)
+
 set(BAKUON_PLUGIN_FORMATS AU VST3)
 if(BAKUON_BUILD_STANDALONE)
     list(APPEND BAKUON_PLUGIN_FORMATS Standalone)
@@ -63,6 +71,7 @@ target_compile_definitions(RemixSafeMaster
 
 target_link_libraries(RemixSafeMaster
     PRIVATE
+        RemixSafeMasterAssets
         juce::juce_audio_utils
         juce::juce_dsp
     PUBLIC

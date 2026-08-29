@@ -40,7 +40,7 @@ output
 - `Metering`: audio threadからGUIへのatomic snapshot
 - `Parameters`: APVTS parameter layoutとraw atomic pointer
 - `PluginProcessor`: host buffer、latency、state、DSPの接続
-- `PluginEditor`: 日本語の操作UI、parameter attachment、meter animation、保護状態表示。DSPロジックを持たない
+- `PluginEditor`: 英語の機能ラベル、埋め込み画像、parameter attachment、meter animation、保護状態表示。DSPロジックを持たない
 
 ## Oversampling / True Peak detection
 
@@ -90,9 +90,9 @@ block内では通常の数値としてInput Sample Peak、Input True Peak、Outp
 
 ## UI
 
-操作は「入力ドライブ → 出力上限 → 戻り時間 → 検出精度」の順に並べ、日本語の動詞で目的を補足する。色は入力をmagenta、出口保護をcyan、時間とGain Reductionをyellow、安全状態をgreen、保護停止をredへ固定し、装飾だけでなく意味の手掛かりとして使う。通常・強い抑制・保護停止を下部status stripで常時表示し、Auto Release中は手動Releaseを無効化して操作の矛盾を防ぐ。
+操作は `INPUT TRIM → TRUE PEAK CEILING → RELEASE TIME → TRUE PEAK MODE` の順に並べる。画面内コピーは機能名、測定値、動作状態に限定する。色はInput Trimをmagenta、Ceilingをcyan、ReleaseとGain Reductionをyellow、保護中をgreen、Bypassをredへ固定し、装飾だけでなく意味の手掛かりとして使う。通常・強い抑制・Bypassを下部status stripで常時表示し、Auto Release中は手動Releaseを無効化して操作の矛盾を防ぐ。
 
-文字列リテラルはJUCEへUTF-8として明示変換し、macOSでは日本語グリフを持つHiragino Sansを指定する。背景、発光、ノブ、meterはJUCEで手続き描画するため、外部bitmapへ依存せずリサイズとHiDPI表示に追従する。UI snapshot targetは実際のeditorをoffscreen PNGへ描画し、文字とlayoutの目視回帰確認に使う。
+生成した `limiter_background.png`、`true_peak_core.png`、`spectrum_divider.png` はCMakeのBinaryData targetでplugin binaryへ埋め込む。背景と装飾画像はJUCEでscale・alpha compositingし、ノブ、カード、meterは手続き描画して操作性とリサイズ追従を保つ。UI snapshot targetは実際のeditorをoffscreen PNGへ描画し、README掲載画像とlayoutの目視回帰確認に使う。
 
 ## Realtime safety
 

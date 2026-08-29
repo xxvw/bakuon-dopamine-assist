@@ -1,6 +1,8 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 
+#include <RemixSafeMasterAssets.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -21,19 +23,14 @@ const auto primaryText = juce::Colour(0xfff5f7ff);
 const auto secondaryText = juce::Colour(0xffaeb7d5);
 const auto quietText = juce::Colour(0xff7882a7);
 
-juce::String operator""_utf8(const char* text, std::size_t length)
-{
-    return juce::String::fromUTF8(text, static_cast<int>(length));
-}
-
-juce::Font japaneseFont(float height, int style = juce::Font::plain)
+juce::Font uiFont(float height, int style = juce::Font::plain)
 {
    #if JUCE_MAC
-    constexpr auto family = "Hiragino Sans";
+    constexpr auto family = "Avenir Next";
    #elif JUCE_WINDOWS
-    constexpr auto family = "Yu Gothic UI";
+    constexpr auto family = "Segoe UI";
    #else
-    constexpr auto family = "Noto Sans CJK JP";
+    constexpr auto family = "Sans";
    #endif
 
     return juce::Font(juce::FontOptions(family, height, style));
@@ -69,9 +66,9 @@ void fillCard(juce::Graphics& graphics,
               juce::Colour edge,
               float corner = 16.0f)
 {
-    juce::ColourGradient cardGradient(surfaceRaised.withAlpha(0.92f),
+    juce::ColourGradient cardGradient(surfaceRaised.withAlpha(0.84f),
                                       bounds.getX(), bounds.getY(),
-                                      surface.withAlpha(0.96f),
+                                      surface.withAlpha(0.90f),
                                       bounds.getRight(), bounds.getBottom(),
                                       false);
     graphics.setGradientFill(cardGradient);
@@ -232,7 +229,7 @@ public:
         }
 
         graphics.setColour(isOn ? primaryText : secondaryText);
-        graphics.setFont(japaneseFont(13.0f, juce::Font::bold));
+        graphics.setFont(uiFont(13.0f, juce::Font::bold));
         graphics.drawFittedText(button.getButtonText(),
                                 bounds.toNearestInt().reduced(4, 0),
                                 juce::Justification::centredLeft,
@@ -272,7 +269,7 @@ public:
     void positionComboBoxText(juce::ComboBox& box, juce::Label& label) override
     {
         label.setBounds(12, 1, box.getWidth() - 44, box.getHeight() - 2);
-        label.setFont(japaneseFont(13.0f, juce::Font::bold));
+        label.setFont(uiFont(13.0f, juce::Font::bold));
         label.setJustificationType(juce::Justification::centredLeft);
     }
 };
@@ -286,97 +283,101 @@ RemixSafeMasterAudioProcessorEditor::RemixSafeMasterAudioProcessorEditor(
 {
     setLookAndFeel(dopamineLookAndFeel.get());
 
-    productBadge.setText("REMIX SAFE MASTER  /  TRUE PEAK GUARD",
+    backgroundArtwork = juce::ImageFileFormat::loadFrom(
+        RemixSafeMasterAssets::limiter_background_png,
+        RemixSafeMasterAssets::limiter_background_pngSize);
+    protectionCoreArtwork = juce::ImageFileFormat::loadFrom(
+        RemixSafeMasterAssets::true_peak_core_png,
+        RemixSafeMasterAssets::true_peak_core_pngSize);
+    spectrumArtwork = juce::ImageFileFormat::loadFrom(
+        RemixSafeMasterAssets::spectrum_divider_png,
+        RemixSafeMasterAssets::spectrum_divider_pngSize);
+
+    productBadge.setText("TRUE PEAK SAFETY LIMITER",
                          juce::dontSendNotification);
     productBadge.setJustificationType(juce::Justification::centredLeft);
-    productBadge.setFont(japaneseFont(10.5f, juce::Font::bold));
+    productBadge.setFont(uiFont(10.5f, juce::Font::bold));
     productBadge.setColour(juce::Label::textColourId, cyan);
 
-    title.setText("爆音ドーパミン・セーフティ"_utf8, juce::dontSendNotification);
+    title.setText("REMIX SAFE MASTER", juce::dontSendNotification);
     title.setJustificationType(juce::Justification::centredLeft);
-    title.setFont(japaneseFont(27.0f, juce::Font::bold));
+    title.setFont(uiFont(28.0f, juce::Font::bold));
     title.setColour(juce::Label::textColourId, primaryText);
 
-    subtitle.setText("壊れた質感はそのまま。出口だけ、確実に守る。"_utf8,
+    subtitle.setText("4x-8x TRUE PEAK DETECTION / 1.5 ms LOOKAHEAD",
                      juce::dontSendNotification);
     subtitle.setJustificationType(juce::Justification::centredLeft);
-    subtitle.setFont(japaneseFont(13.0f));
+    subtitle.setFont(uiFont(12.0f, juce::Font::bold));
     subtitle.setColour(juce::Label::textColourId, secondaryText);
 
-    liveBadge.setText("●  LIVE PROTECTION"_utf8, juce::dontSendNotification);
+    liveBadge.setText("PROTECTION ON", juce::dontSendNotification);
     liveBadge.setJustificationType(juce::Justification::centred);
-    liveBadge.setFont(japaneseFont(11.0f, juce::Font::bold));
+    liveBadge.setFont(uiFont(11.0f, juce::Font::bold));
     liveBadge.setColour(juce::Label::textColourId, green);
 
     configureRotary(inputTrim, " dB", magenta,
-                    "入力ドライブ"_utf8,
-                    "安全処理へ入る前の音量。音色を保ったまま -24〜+6 dBで調整します。"_utf8);
+                    "Input Trim",
+                    "Set gain before true peak limiting. Range: -24 to +6 dB.");
     configureRotary(ceiling, " dBTP", cyan,
-                    "出力上限"_utf8,
-                    "最終出力のTrue Peak上限。配信や書き出しには -1.0 dBTPが安全な出発点です。"_utf8);
+                    "True Peak Ceiling",
+                    "Set the maximum output true peak. Range: -3.0 to -0.1 dBTP.");
     configureRotary(release, " ms", yellow,
-                    "戻り時間"_utf8,
-                    "ゲイン抑制が元へ戻る速さ。おまかせ復帰を切ったときに有効です。"_utf8);
+                    "Release Time",
+                    "Set gain-reduction release time. Active when Auto Release is off.");
 
-    configureControlLabel(inputTrimLabel, "入力ドライブ"_utf8, "01  音を入れる"_utf8);
-    configureControlLabel(ceilingLabel, "出力上限"_utf8, "02  出口を守る"_utf8);
-    configureControlLabel(releaseLabel, "戻り時間"_utf8, "03  揺れを整える"_utf8);
-    configureControlLabel(qualityLabel, "検出精度"_utf8, "04  見張りを選ぶ"_utf8);
+    configureControlLabel(inputTrimLabel, "INPUT TRIM", "01 / DRIVE");
+    configureControlLabel(ceilingLabel, "TRUE PEAK CEILING", "02 / LIMIT");
+    configureControlLabel(releaseLabel, "RELEASE TIME", "03 / RELEASE");
+    configureControlLabel(qualityLabel, "TRUE PEAK MODE", "04 / DETECT");
 
-    quality.addItem("標準・4倍 〔軽快〕"_utf8, 1);
-    quality.addItem("高精度・8倍 〔精密〕"_utf8, 2);
+    quality.addItem("NORMAL / 4x", 1);
+    quality.addItem("HIGH / 8x", 2);
     quality.setJustificationType(juce::Justification::centredLeft);
-    quality.setName("True Peak検出精度"_utf8);
-    quality.setTooltip("標準は低負荷、高精度は8倍補間でピークを細かく監視します。"_utf8);
+    quality.setName("True Peak Mode");
+    quality.setTooltip("Select 4x real-time detection or 8x high-precision detection.");
 
-    qualityHint.setText("通常は標準、最終書き出しは高精度"_utf8,
+    qualityHint.setText("4x REALTIME / 8x EXPORT",
                         juce::dontSendNotification);
     qualityHint.setJustificationType(juce::Justification::centredLeft);
-    qualityHint.setFont(japaneseFont(10.5f));
+    qualityHint.setFont(uiFont(10.0f, juce::Font::bold));
     qualityHint.setColour(juce::Label::textColourId, secondaryText);
 
     autoRelease.setColour(juce::ToggleButton::tickColourId, yellow);
-    autoRelease.setButtonText("おまかせ復帰"_utf8);
-    autoRelease.setName("おまかせ復帰"_utf8);
-    autoRelease.setTooltip("素材に合わせて戻り時間を自動調整し、ポンピングを抑えます。"_utf8);
+    autoRelease.setButtonText("AUTO RELEASE");
+    autoRelease.setName("Auto Release");
+    autoRelease.setTooltip("Set release time automatically from gain reduction.");
     bypass.setColour(juce::ToggleButton::tickColourId, danger);
-    bypass.setButtonText("保護を停止"_utf8);
-    bypass.setName("保護を停止"_utf8);
-    bypass.setTooltip("安全処理を滑らかに停止します。比較確認以外ではオフを推奨します。"_utf8);
+    bypass.setButtonText("BYPASS");
+    bypass.setName("Bypass");
+    bypass.setTooltip("Bypass true peak limiting with latency alignment.");
 
-    meterSectionTitle.setText("リアルタイム安全モニター"_utf8, juce::dontSendNotification);
+    meterSectionTitle.setText("PEAK MONITOR", juce::dontSendNotification);
     meterSectionTitle.setJustificationType(juce::Justification::centredLeft);
-    meterSectionTitle.setFont(japaneseFont(12.0f, juce::Font::bold));
+    meterSectionTitle.setFont(uiFont(12.0f, juce::Font::bold));
     meterSectionTitle.setColour(juce::Label::textColourId, primaryText);
 
     for (auto* meter : { &inputSampleMeter, &inputTruePeakMeter,
                          &outputTruePeakMeter, &gainReductionMeter })
         configureMeterValueLabel(*meter);
 
-    inputSampleMeter.setText("-∞ dBFS"_utf8, juce::dontSendNotification);
-    inputTruePeakMeter.setText("-∞ dBTP"_utf8, juce::dontSendNotification);
-    outputTruePeakMeter.setText("-∞ dBTP"_utf8, juce::dontSendNotification);
-    gainReductionMeter.setText("0.0 dB / 最大 0.0 dB"_utf8, juce::dontSendNotification);
+    inputSampleMeter.setText("-INF dBFS", juce::dontSendNotification);
+    inputTruePeakMeter.setText("-INF dBTP", juce::dontSendNotification);
+    outputTruePeakMeter.setText("-INF dBTP", juce::dontSendNotification);
+    gainReductionMeter.setText("0.0 dB / MAX 0.0 dB", juce::dontSendNotification);
 
     characterWarning.setJustificationType(juce::Justification::centredLeft);
-    characterWarning.setFont(japaneseFont(13.0f, juce::Font::bold));
+    characterWarning.setFont(uiFont(13.0f, juce::Font::bold));
     characterWarning.setColour(juce::Label::textColourId, green);
-    characterWarning.setText("✓ 保護中 — 壊れた質感はそのまま、出口だけ安全"_utf8,
+    characterWarning.setText("TRUE PEAK LIMITED TO CEILING",
                              juce::dontSendNotification);
 
-    footerHint.setText("TIP  出力上限を決める → 入力ドライブで攻める → 緑なら完成"_utf8,
-                       juce::dontSendNotification);
-    footerHint.setJustificationType(juce::Justification::centredRight);
-    footerHint.setFont(japaneseFont(10.5f));
-    footerHint.setColour(juce::Label::textColourId, quietText);
-
-    const std::array<juce::Component*, 22> components {
+    const std::array<juce::Component*, 21> components {
         &productBadge, &title, &subtitle, &liveBadge,
         &inputTrim, &ceiling, &release,
         &inputTrimLabel, &ceilingLabel, &releaseLabel,
         &quality, &qualityLabel, &qualityHint, &autoRelease, &bypass,
         &meterSectionTitle, &inputSampleMeter, &inputTruePeakMeter,
-        &outputTruePeakMeter, &gainReductionMeter, &characterWarning, &footerHint
+        &outputTruePeakMeter, &gainReductionMeter, &characterWarning
     };
     for (auto* component : components)
         addAndMakeVisible(component);
@@ -421,6 +422,16 @@ void RemixSafeMasterAudioProcessorEditor::paint(juce::Graphics& graphics)
     graphics.setGradientFill(backgroundGradient);
     graphics.fillAll();
 
+    if (backgroundArtwork.isValid())
+    {
+        graphics.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
+        graphics.setOpacity(0.72f);
+        graphics.drawImage(backgroundArtwork,
+                           editorBounds,
+                           juce::RectanglePlacement::fillDestination);
+        graphics.setOpacity(1.0f);
+    }
+
     drawGlow(graphics, { editorBounds.getWidth() * 0.16f, 85.0f }, 190.0f, magenta);
     drawGlow(graphics, { editorBounds.getWidth() * 0.86f, 120.0f }, 220.0f, cyan);
 
@@ -452,6 +463,22 @@ void RemixSafeMasterAudioProcessorEditor::paint(juce::Graphics& graphics)
     graphics.setGradientFill(scan);
     graphics.fillRoundedRectangle(headerBounds, 18.0f);
 
+    if (protectionCoreArtwork.isValid())
+    {
+        const auto pulse = static_cast<float>(std::sin(animationPhase) * 0.5 + 0.5);
+        const auto coreBounds = juce::Rectangle<float>(headerBounds.getRight() - 102.0f,
+                                                       headerBounds.getY(),
+                                                       102.0f,
+                                                       headerBounds.getHeight())
+                                    .reduced(6.0f, 2.0f);
+        graphics.setOpacity(0.46f + pulse * 0.12f);
+        graphics.drawImage(protectionCoreArtwork,
+                           coreBounds,
+                           juce::RectanglePlacement::centred
+                               | juce::RectanglePlacement::onlyReduceInSize);
+        graphics.setOpacity(1.0f);
+    }
+
     const auto controlCards = layout.controls.toFloat();
     constexpr auto gap = 10.0f;
     const auto cardWidth = (controlCards.getWidth() - gap * 3.0f) / 4.0f;
@@ -467,9 +494,19 @@ void RemixSafeMasterAudioProcessorEditor::paint(juce::Graphics& graphics)
     }
 
     fillCard(graphics, layout.meters.toFloat(), cyan, 14.0f);
+
+    if (spectrumArtwork.isValid())
+    {
+        const auto spectrumBounds = layout.meters.toFloat().reduced(10.0f, 5.0f);
+        graphics.setOpacity(0.16f);
+        graphics.drawImage(spectrumArtwork,
+                           spectrumBounds,
+                           juce::RectanglePlacement::stretchToFit);
+        graphics.setOpacity(1.0f);
+    }
+
     const std::array<juce::String, 4> names {
-        "入力ピーク"_utf8, "入力 TRUE PEAK"_utf8,
-        "出力 TRUE PEAK"_utf8, "安全ゲイン"_utf8
+        "INPUT SAMPLE", "INPUT TRUE PEAK", "OUTPUT TRUE PEAK", "GAIN REDUCTION"
     };
     const std::array<float, 4> values {
         displayInputSample, displayInputTruePeak,
@@ -504,8 +541,8 @@ void RemixSafeMasterAudioProcessorEditor::resized()
     const auto layout = makeLayout(getLocalBounds());
 
     auto header = layout.header.reduced(20, 10);
-    auto liveArea = header.removeFromRight(std::clamp(header.getWidth() / 4, 150, 210));
-    liveBadge.setBounds(liveArea.reduced(6, 22));
+    auto liveArea = header.removeFromRight(std::clamp(header.getWidth() / 3, 205, 245));
+    liveBadge.setBounds(liveArea.removeFromLeft(liveArea.getWidth() - 96).reduced(6, 22));
     productBadge.setBounds(header.removeFromTop(18));
     title.setBounds(header.removeFromTop(38));
     subtitle.setBounds(header);
@@ -556,9 +593,7 @@ void RemixSafeMasterAudioProcessorEditor::resized()
         meterLabels[index]->setBounds(row.removeFromRight(128));
     }
 
-    auto status = layout.status.reduced(15, 0);
-    characterWarning.setBounds(status.removeFromLeft(status.getWidth() * 58 / 100));
-    footerHint.setBounds(status);
+    characterWarning.setBounds(layout.status.reduced(15, 0));
 }
 
 void RemixSafeMasterAudioProcessorEditor::timerCallback()
@@ -596,32 +631,33 @@ void RemixSafeMasterAudioProcessorEditor::timerCallback()
                                      heldGainReduction - 0.15f);
     }
 
-        gainReductionMeter.setText(juce::String(displayGainReduction, 1)
-                               + " dB  /  最大 "_utf8 + juce::String(heldGainReduction, 1) + " dB",
+    gainReductionMeter.setText(juce::String(displayGainReduction, 1)
+                                   + " dB / MAX "
+                                   + juce::String(heldGainReduction, 1) + " dB",
                                juce::dontSendNotification);
 
     if (bypass.getToggleState())
     {
-        characterWarning.setText("●  保護を停止中 — 出力を必ず確認してください"_utf8,
+        characterWarning.setText("PROTECTION OFF. CHECK OUTPUT LEVEL.",
                                  juce::dontSendNotification);
         characterWarning.setColour(juce::Label::textColourId, danger);
-        liveBadge.setText("●  PROTECTION OFF"_utf8, juce::dontSendNotification);
+        liveBadge.setText("PROTECTION OFF", juce::dontSendNotification);
         liveBadge.setColour(juce::Label::textColourId, danger);
     }
     else if (heldGainReduction > 3.0f)
     {
-        characterWarning.setText("▲  変化注意 — 抑制が3 dBを超えています"_utf8,
+        characterWarning.setText("GAIN REDUCTION EXCEEDS 3 dB.",
                                  juce::dontSendNotification);
         characterWarning.setColour(juce::Label::textColourId, yellow);
-        liveBadge.setText("●  HEAVY GUARD"_utf8, juce::dontSendNotification);
+        liveBadge.setText("HEAVY LIMIT", juce::dontSendNotification);
         liveBadge.setColour(juce::Label::textColourId, yellow);
     }
     else
     {
-        characterWarning.setText("✓  保護中 — 壊れた質感はそのまま、出口だけ安全"_utf8,
+        characterWarning.setText("TRUE PEAK LIMITED TO CEILING.",
                                  juce::dontSendNotification);
         characterWarning.setColour(juce::Label::textColourId, green);
-        liveBadge.setText("●  LIVE PROTECTION"_utf8, juce::dontSendNotification);
+        liveBadge.setText("PROTECTION ON", juce::dontSendNotification);
         liveBadge.setColour(juce::Label::textColourId, green);
     }
 
@@ -646,7 +682,7 @@ void RemixSafeMasterAudioProcessorEditor::drawMeter(juce::Graphics& graphics,
     const auto bar = bounds.reduced(2.0f, 7.0f);
 
     graphics.setColour(secondaryText);
-    graphics.setFont(japaneseFont(10.8f, juce::Font::bold));
+    graphics.setFont(uiFont(10.5f, juce::Font::bold));
     graphics.drawFittedText(name, labelArea.toNearestInt(),
                             juce::Justification::centredLeft, 1);
 
@@ -717,13 +753,13 @@ void RemixSafeMasterAudioProcessorEditor::configureControlLabel(
     label.setText(step + "\n" + titleText, juce::dontSendNotification);
     label.setJustificationType(juce::Justification::centredLeft);
     label.setColour(juce::Label::textColourId, primaryText);
-    label.setFont(japaneseFont(12.0f, juce::Font::bold));
+    label.setFont(uiFont(11.5f, juce::Font::bold));
 }
 
 void RemixSafeMasterAudioProcessorEditor::configureMeterValueLabel(juce::Label& label)
 {
     label.setJustificationType(juce::Justification::centredRight);
-    label.setFont(japaneseFont(12.0f, juce::Font::bold));
+    label.setFont(uiFont(12.0f, juce::Font::bold));
     label.setColour(juce::Label::textColourId, primaryText);
 }
 
@@ -731,7 +767,7 @@ juce::String RemixSafeMasterAudioProcessorEditor::formatDecibels(
     float value,
     const juce::String& suffix)
 {
-    return value <= -200.0f ? "-∞"_utf8 + suffix : juce::String(value, 1) + suffix;
+    return value <= -200.0f ? "-INF" + suffix : juce::String(value, 1) + suffix;
 }
 
 float RemixSafeMasterAudioProcessorEditor::updatePeakDisplay(float current,
