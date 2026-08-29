@@ -32,7 +32,7 @@ void SafetyLimiter::prepare(double newSampleRate, int maximumBlockSize, int chan
     gainComputer.prepare(sampleRate, latencySamples);
     inputTruePeakDetector.setOversamplingFactor(parameters.oversamplingFactor);
     conformanceTruePeakDetector.setOversamplingFactor(OversamplingStage::conformanceFactor);
-    outputTruePeakDetector.setOversamplingFactor(OversamplingStage::highFactor);
+    outputTruePeakDetector.setOversamplingFactor(parameters.oversamplingFactor);
     reset();
 }
 
@@ -67,6 +67,7 @@ void SafetyLimiter::setParameters(const LimiterParameters& newParameters) noexce
                                                - conformanceCalibrationDecibels));
     bypassSmoother.setTarget(parameters.bypass ? 1.0 : 0.0);
     inputTruePeakDetector.setOversamplingFactor(parameters.oversamplingFactor);
+    outputTruePeakDetector.setOversamplingFactor(parameters.oversamplingFactor);
 }
 
 void SafetyLimiter::beginBlock() noexcept

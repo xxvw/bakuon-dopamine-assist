@@ -71,20 +71,6 @@ double OversamplingStage::interpolate(int channel, int phase, int factor) const 
         value += coefficient * historySample(channel, tap);
     }
 
-    if (useAnnex)
-    {
-        double conformanceValue = 0.0;
-        const auto highPhase = safePhase * 4;
-        for (int tap = 0; tap < highTaps; ++tap)
-            conformanceValue +=
-                highQualityCoefficients[static_cast<std::size_t>(highPhase)]
-                                       [static_cast<std::size_t>(tap)]
-                * historySample(channel, tap);
-
-        if (std::abs(conformanceValue) > std::abs(value))
-            value = conformanceValue;
-    }
-
     return finiteOrZero(value);
 }
 

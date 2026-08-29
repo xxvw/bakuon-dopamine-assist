@@ -91,6 +91,7 @@ public:
         testBypass();
         testBypassTransition();
         testSampleRatesAndReset();
+        testNormalModePerformance();
     }
 
 private:
@@ -322,6 +323,55 @@ private:
                     expectWithinAbsoluteError(limiter.processFrame({}, 1)[0], 0.0, 1.0e-15);
             }
         }
+    }
+
+    void testNormalModePerformance()
+    {
+        beginTest("48 kHz stereo Normal mode performance target");
+        constexpr auto sampleRate = 48000.0;
+        constexpr auto blockSize = 512;
+        constexpr auto durationSeconds = 10;
+        constexpr auto totalSamples = static_cast<int>(sampleRate) * durationSeconds;
+
+        bakuon::dsp::SafetyLimiter limiter;
+        bakuon::dsp::LimiterParameters parameters;
+        parameters.oversamplingFactor = bakuon::dsp::OversamplingStage::normalFactor;
+        limiter.setParameters(parameters);
+        limiter.prepare(sampleRate, blockSize, 2);
+
+        std::array<Frame, blockSize> input {};
+        for (int sample = 0; sample < blockSize; ++sample)
+        {
+            const auto value = 0.5 * std::sin(2.0 * std::numbers::pi * 997.0
+                                              * static_cast<double>(sample) / sampleRate);
+            input[static_cast<std::size_t>(sample)] = { value, -0.7 * value };
+        }
+
+        double checksum = 0.0;
+        const auto start = juce::Time::getMillisecondCounterHiRes();
+        for (int processed = 0; processed < totalSamples; processed += blockSize)
+        {
+            limiter.beginBlock();
+            const auto samplesThisBlock = std::min(blockSize, totalSamples - processed);
+            for (int sample = 0; sample < samplesThisBlock; ++sample)
+            {
+                const auto output = limiter.processFrame(input[static_cast<std::size_t>(sample)],
+                                                         2);
+                checksum += output[0] + output[1];
+            }
+            static_cast<void>(limiter.endBlock());
+        }
+        const auto elapsedMilliseconds = juce::Time::getMillisecondCounterHiRes() - start;
+        const auto realtimeCpuPercent = elapsedMilliseconds
+                                      / (1000.0 * durationSeconds) * 100.0;
+
+        logMessage("Normal mode CPU: " + juce::String(realtimeCpuPercent, 3)
+                   + "% (48 kHz, stereo, 512 samples)");
+        expect(std::isfinite(checksum));
+#if defined(NDEBUG)
+        expect(realtimeCpuPercent < 5.0,
+               "Release Normal mode should remain below the 5% CPU target");
+#endif
     }
 };
 
