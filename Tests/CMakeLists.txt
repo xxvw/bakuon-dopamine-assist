@@ -2,6 +2,11 @@ juce_add_console_app(RemixSafeMasterTests PRODUCT_NAME "Remix Safe Master Tests"
 
 target_sources(RemixSafeMasterTests PRIVATE
     TestMain.cpp
+    TruePeakDetectorTests.cpp
+    ../Source/DSP/OversamplingStage.cpp
+    ../Source/DSP/OversamplingStage.h
+    ../Source/DSP/TruePeakDetector.cpp
+    ../Source/DSP/TruePeakDetector.h
     ../Source/Parameters/Parameters.cpp
     ../Source/Parameters/Parameters.h)
 

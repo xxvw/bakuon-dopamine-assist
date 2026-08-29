@@ -29,3 +29,13 @@
 検討した選択肢: 現在の開発Macに合わせてより新しいtargetにする。
 
 将来の変更可能性: 対象DAWとIntel Macの互換性試験後に確定する。
+
+## D-004 True Peak補間方式
+
+決定: NormalはITU-R BS.1770-5 Annex 2記載の4相48次FIR係数（4 phase × 12 taps）を使用し、Highは32-tap Blackman-windowed sincの8相補間を使用する。
+
+理由: Normalで規格記載方式との直接対応を保ち、Highでは8xの時間分解能を追加するため。いずれも入力段でsampleを±1へclampしない。
+
+検討した選択肢: Sample Peakのみ、線形補間、JUCE Oversamplingを検証なしでmeterとして流用する。
+
+将来の変更可能性: BS.2217 test materialや外部golden referenceとの比較結果に応じて、Highのtap数・windowまたは検証済みSRC実装へ更新する。
