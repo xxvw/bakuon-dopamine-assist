@@ -1,0 +1,122 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "mac-base",
+      "hidden": true,
+      "generator": "Xcode",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "12.0",
+        "BAKUON_BUILD_STANDALONE": "ON",
+        "BAKUON_BUILD_TESTS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "mac-debug-arm64",
+      "displayName": "macOS Debug (arm64)",
+      "inherits": "mac-base",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    },
+    {
+      "name": "mac-release-arm64",
+      "displayName": "macOS Release (arm64)",
+      "inherits": "mac-base",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    },
+    {
+      "name": "mac-release-universal",
+      "displayName": "macOS Release (Universal)",
+      "inherits": "mac-base",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64"
+      }
+    },
+    {
+      "name": "win-release-x64",
+      "displayName": "Windows Release (x64)",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "BAKUON_BUILD_STANDALONE": "ON",
+        "BAKUON_BUILD_TESTS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "mac-debug-arm64",
+      "configurePreset": "mac-debug-arm64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "mac-release-arm64",
+      "configurePreset": "mac-release-arm64",
+      "configuration": "Release"
+    },
+    {
+      "name": "mac-release-universal",
+      "configurePreset": "mac-release-universal",
+      "configuration": "Release"
+    },
+    {
+      "name": "win-release-x64",
+      "configurePreset": "win-release-x64",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "mac-debug-arm64",
+      "configurePreset": "mac-debug-arm64",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mac-release-arm64",
+      "configurePreset": "mac-release-arm64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mac-release-universal",
+      "configurePreset": "mac-release-universal",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "win-release-x64",
+      "configurePreset": "win-release-x64",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

@@ -13,6 +13,7 @@
 build/
 build-*/
 cmake-build-*/
+CMakeUserPresets.json
 
 # Xcode
 DerivedData/
