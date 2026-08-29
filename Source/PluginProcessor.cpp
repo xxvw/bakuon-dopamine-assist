@@ -4,7 +4,12 @@
 RemixSafeMasterAudioProcessor::RemixSafeMasterAudioProcessor()
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
-                         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      parameters(*this,
+                 nullptr,
+                 bakuon::parameters::stateTreeType,
+                 bakuon::parameters::createParameterLayout()),
+      rawParameters(bakuon::parameters::getRawParameterPointers(parameters))
 {
     setProcessingPrecision(ProcessingPrecision::singlePrecision);
 }
@@ -53,11 +58,26 @@ juce::AudioProcessorEditor* RemixSafeMasterAudioProcessor::createEditor()
 
 void RemixSafeMasterAudioProcessor::getStateInformation(juce::MemoryBlock& destination)
 {
-    destination.reset();
+    auto state = parameters.copyState();
+    state.setProperty("schemaVersion", bakuon::parameters::stateSchemaVersion, nullptr);
+    if (auto xml = state.createXml())
+        copyXmlToBinary(*xml, destination);
 }
 
-void RemixSafeMasterAudioProcessor::setStateInformation(const void*, int)
+void RemixSafeMasterAudioProcessor::setStateInformation(const void* data, int size)
 {
+    const auto xml = getXmlFromBinary(data, size);
+    if (xml == nullptr || ! xml->hasTagName(parameters.state.getType()))
+        return;
+
+    auto restored = juce::ValueTree::fromXml(*xml);
+    if (! restored.isValid())
+        return;
+
+    if (! restored.hasProperty("schemaVersion"))
+        restored.setProperty("schemaVersion", 0, nullptr);
+
+    parameters.replaceState(restored);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

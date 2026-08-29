@@ -40,7 +40,9 @@ target_sources(RemixSafeMaster PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/PluginProcessor.cpp
-    Source/PluginProcessor.h)
+    Source/PluginProcessor.h
+    Source/Parameters/Parameters.cpp
+    Source/Parameters/Parameters.h)
 
 target_compile_definitions(RemixSafeMaster
     PUBLIC

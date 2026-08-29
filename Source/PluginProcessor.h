@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Parameters/Parameters.h"
 
 class RemixSafeMasterAudioProcessor final : public juce::AudioProcessor
 {
@@ -12,6 +13,7 @@ public:
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
+    bool supportsDoublePrecisionProcessing() const override { return true; }
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     void processBlock(juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
 
@@ -33,9 +35,13 @@ public:
     void getStateInformation(juce::MemoryBlock&) override;
     void setStateInformation(const void*, int) override;
 
+    juce::AudioProcessorValueTreeState parameters;
+
 private:
     template <typename SampleType>
     void process(juce::AudioBuffer<SampleType>& buffer);
+
+    bakuon::parameters::RawParameterPointers rawParameters;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RemixSafeMasterAudioProcessor)
 };
