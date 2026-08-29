@@ -32,9 +32,9 @@
 
 ## D-004 True Peak補間方式
 
-決定: NormalはITU-R BS.1770-5 Annex 2記載の4相48次FIR係数（4 phase × 12 taps）と64-tap補間の4相検証値の大きい方を使用し、Highは64-tap Blackman-windowed sincの8相補間を使用する。
+決定: NormalはITU-R BS.1770-5 Annex 2記載の4相48次FIR係数（4 phase × 12 taps）を使用し、Highは64-tap Blackman-windowed sincの8相補間を使用する。Input/Output meterは選択Qualityへ追従し、Ceiling保証用predictorは別系統とする。
 
-理由: Normalで規格記載方式との直接対応を保ち、Highでは8xの時間分解能を追加するため。いずれも入力段でsampleを±1へclampしない。
+理由: Normalで規格記載方式との直接対応とCPU目標を両立し、Highでは8xの時間分解能を追加するため。いずれも入力段でsampleを±1へclampしない。
 
 検討した選択肢: Sample Peakのみ、線形補間、JUCE Oversamplingを検証なしでmeterとして流用する。
 
@@ -49,3 +49,13 @@
 検討した選択肢: 0.4 dB以上の固定guard、output hard clipper、test許容値の緩和。
 
 将来の変更可能性: 外部規格meterおよびBS.2217 vectorで同等以上の精度を証明できる低CPU方式へ置換可能。16相predictorはユーザー向けquality modeや非線形oversampling処理を意味しない。
+
+## D-006 Normal modeのCPU最適化
+
+決定: Input/Output meterは選択中のNormal 4xまたはHigh 8xで処理し、NormalではAnnex 2の12-tap係数だけを使用する。Ceiling用16相predictorは独立して維持する。
+
+理由: 48 kHz、stereo、512 samplesのRelease benchmarkで、Normalの初回実測6.206%が5%目標を超えたため。重複していた64-tap meter処理を除くことで3.796%へ低減し、独立16x referenceによるCeiling +0.05 dBTP試験は引き続き合格した。
+
+検討した選択肢: Ceiling predictorのphase/tap削減、Output True Peak meterの廃止、5%目標の緩和。
+
+将来の変更可能性: SIMD化または検証済みpolyphase実装により、High modeを含む追加最適化を行える。性能閾値はCI worker差を考慮し、正式なbenchmark runnerを導入した時点で再調整する。
