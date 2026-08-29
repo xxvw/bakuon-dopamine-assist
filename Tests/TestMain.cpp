@@ -82,6 +82,41 @@ public:
         expectDefault(bakuon::parameters::ids::autoRelease, 1.0f);
         expectDefault(bakuon::parameters::ids::quality, 0.0f);
         expectDefault(bakuon::parameters::ids::bypass, 0.0f);
+
+        beginTest("APVTS state round-trip restores automation values");
+        auto* inputTrim = findParameter(bakuon::parameters::ids::inputTrim);
+        auto* ceiling = findParameter(bakuon::parameters::ids::ceiling);
+        expect(inputTrim != nullptr && ceiling != nullptr);
+        if (inputTrim != nullptr && ceiling != nullptr)
+        {
+            inputTrim->setValueNotifyingHost(inputTrim->convertTo0to1(5.4f));
+            ceiling->setValueNotifyingHost(ceiling->convertTo0to1(-2.3f));
+            auto savedState = state.copyState();
+            savedState.setProperty("schemaVersion",
+                                   bakuon::parameters::stateSchemaVersion,
+                                   nullptr);
+
+            DummyAudioProcessor restoredProcessor;
+            juce::AudioProcessorValueTreeState restoredState(
+                restoredProcessor,
+                nullptr,
+                bakuon::parameters::stateTreeType,
+                bakuon::parameters::createParameterLayout());
+            restoredState.replaceState(savedState);
+
+            const auto restoredInputTrim = restoredState.getRawParameterValue(
+                bakuon::parameters::ids::inputTrim);
+            const auto restoredCeiling = restoredState.getRawParameterValue(
+                bakuon::parameters::ids::ceiling);
+            expect(restoredInputTrim != nullptr && restoredCeiling != nullptr);
+            if (restoredInputTrim != nullptr && restoredCeiling != nullptr)
+            {
+                expectWithinAbsoluteError(restoredInputTrim->load(), 5.4f, 0.0001f);
+                expectWithinAbsoluteError(restoredCeiling->load(), -2.3f, 0.0001f);
+            }
+            expectEquals(static_cast<int>(savedState.getProperty("schemaVersion")),
+                         bakuon::parameters::stateSchemaVersion);
+        }
     }
 };
 

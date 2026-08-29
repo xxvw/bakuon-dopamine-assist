@@ -87,7 +87,9 @@ public:
         testTruePeakCeiling();
         testFloatingPointHeadroomAndNumericSafety();
         testStereoLink();
+        testInputTrimAndParameterSmoothing();
         testBypass();
+        testBypassTransition();
         testSampleRatesAndReset();
     }
 
@@ -223,6 +225,76 @@ private:
         const auto output = result.output[static_cast<std::size_t>(result.latencySamples + 100)];
         expectWithinAbsoluteError(output[0], 2.0, 1.0e-12);
         expectWithinAbsoluteError(output[1], -2.0, 1.0e-12);
+    }
+
+    void testInputTrimAndParameterSmoothing()
+    {
+        beginTest("Input Trim is applied and automation is smoothed");
+        constexpr auto sampleRate = 48000.0;
+        bakuon::dsp::SafetyLimiter limiter;
+        bakuon::dsp::LimiterParameters parameters;
+        parameters.inputTrimDb = -6.0;
+        limiter.setParameters(parameters);
+        limiter.prepare(sampleRate, 127, 1);
+        limiter.beginBlock();
+
+        std::vector<double> output;
+        output.reserve(2400);
+        for (int sample = 0; sample < 1200; ++sample)
+            output.push_back(limiter.processFrame({ 0.1, 0.0 }, 1)[0]);
+
+        const auto expectedTrimmed = 0.1 * bakuon::dsp::decibelsToLinear(-6.0);
+        expectWithinAbsoluteError(output[static_cast<std::size_t>(limiter.getLatencySamples() + 700)],
+                                  expectedTrimmed,
+                                  1.0e-12);
+
+        parameters.inputTrimDb = 6.0;
+        limiter.setParameters(parameters);
+        for (int sample = 0; sample < 1200; ++sample)
+            output.push_back(limiter.processFrame({ 0.1, 0.0 }, 1)[0]);
+
+        double largestAdjacentStep = 0.0;
+        const auto transitionStart = static_cast<std::size_t>(1200 + limiter.getLatencySamples());
+        const auto transitionEnd = std::min(output.size(), transitionStart + 700);
+        for (std::size_t sample = transitionStart; sample < transitionEnd; ++sample)
+            largestAdjacentStep = std::max(largestAdjacentStep,
+                                           std::abs(output[sample] - output[sample - 1]));
+
+        expect(largestAdjacentStep < 0.001,
+               "10 ms Input Trim smoothing must avoid a discontinuity");
+        expectWithinAbsoluteError(output.back(),
+                                  0.1 * bakuon::dsp::decibelsToLinear(6.0),
+                                  1.0e-9);
+    }
+
+    void testBypassTransition()
+    {
+        beginTest("Bypass transition is latency aligned and crossfaded");
+        constexpr auto sampleRate = 48000.0;
+        bakuon::dsp::SafetyLimiter limiter;
+        bakuon::dsp::LimiterParameters parameters;
+        limiter.setParameters(parameters);
+        limiter.prepare(sampleRate, 113, 1);
+        limiter.beginBlock();
+
+        std::vector<double> output;
+        output.reserve(3000);
+        for (int sample = 0; sample < 1500; ++sample)
+            output.push_back(limiter.processFrame({ 2.0, 0.0 }, 1)[0]);
+
+        parameters.bypass = true;
+        limiter.setParameters(parameters);
+        for (int sample = 0; sample < 1500; ++sample)
+            output.push_back(limiter.processFrame({ 2.0, 0.0 }, 1)[0]);
+
+        double largestTransitionStep = 0.0;
+        for (std::size_t sample = 1400; sample < 2100; ++sample)
+            largestTransitionStep = std::max(largestTransitionStep,
+                                             std::abs(output[sample] - output[sample - 1]));
+
+        expect(largestTransitionStep < 0.01,
+               "10 ms bypass crossfade must avoid a large discontinuity");
+        expectWithinAbsoluteError(output.back(), 2.0, 1.0e-12);
     }
 
     void testSampleRatesAndReset()
