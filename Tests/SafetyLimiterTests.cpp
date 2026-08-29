@@ -88,6 +88,7 @@ public:
         testFloatingPointHeadroomAndNumericSafety();
         testStereoLink();
         testInputTrimAndParameterSmoothing();
+        testMetering();
         testBypass();
         testBypassTransition();
         testSampleRatesAndReset();
@@ -123,7 +124,7 @@ private:
 
         for (const auto sampleRate : sampleRates)
         {
-            std::array<std::vector<Frame>, 4> signals;
+            std::array<std::vector<Frame>, 6> signals;
             signals[0] = makeSine(sampleRate,
                                   sampleRate * 0.23,
                                   3.2,
@@ -150,6 +151,9 @@ private:
             for (auto& frame : signals[3])
                 for (auto& sample : frame)
                     sample = sample >= 0.0 ? 2.0 : -2.0;
+
+            signals[4] = makeSine(sampleRate, 997.0, 1.0, 4096, 0.23);
+            signals[5] = makeSine(sampleRate, 997.0, 0.99, 4096, 0.41);
 
             for (std::size_t signalIndex = 0; signalIndex < signals.size(); ++signalIndex)
             {
@@ -226,6 +230,29 @@ private:
         const auto output = result.output[static_cast<std::size_t>(result.latencySamples + 100)];
         expectWithinAbsoluteError(output[0], 2.0, 1.0e-12);
         expectWithinAbsoluteError(output[1], -2.0, 1.0e-12);
+    }
+
+    void testMetering()
+    {
+        beginTest("Sample Peak, True Peak and Gain Reduction meters publish DSP values");
+        constexpr auto sampleRate = 48000.0;
+        bakuon::dsp::SafetyLimiter limiter;
+        limiter.prepare(sampleRate, 2048, 2);
+        limiter.beginBlock();
+
+        for (int sample = 0; sample < 2048; ++sample)
+        {
+            const auto wave = 2.0 * std::sin(2.0 * std::numbers::pi * 7000.0
+                                             * static_cast<double>(sample) / sampleRate);
+            static_cast<void>(limiter.processFrame({ wave, -0.5 * wave }, 2));
+        }
+
+        const auto meters = limiter.endBlock();
+        expect(meters.inputSamplePeakDb > 5.9f);
+        expect(meters.inputTruePeakDb >= meters.inputSamplePeakDb - 0.1f);
+        expect(meters.outputTruePeakDb < 0.0f);
+        expect(meters.currentGainReductionDb > 1.0f);
+        expect(meters.peakGainReductionDb >= meters.currentGainReductionDb);
     }
 
     void testInputTrimAndParameterSmoothing()
@@ -305,12 +332,15 @@ private:
                                                   96000.0, 176400.0, 192000.0 };
         const std::array<int, 7> blockSizes { 1, 3, 31, 127, 511, 1023, 8192 };
 
+        bakuon::dsp::SafetyLimiter limiter;
         for (const auto sampleRate : sampleRates)
         {
             for (const auto blockSize : blockSizes)
             {
-                bakuon::dsp::SafetyLimiter limiter;
                 limiter.prepare(sampleRate, blockSize, 1);
+                expectEquals(limiter.getLatencySamples(),
+                             static_cast<int>(std::round(sampleRate * 0.0015))
+                                 + bakuon::dsp::OversamplingStage::maximumLatencySamples);
                 limiter.beginBlock();
                 for (int sample = 0; sample < 64; ++sample)
                 {
