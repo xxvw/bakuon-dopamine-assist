@@ -51,18 +51,38 @@ double OversamplingStage::interpolate(int channel, int phase, int factor) const 
     if (channel < 0 || channel >= maxChannels)
         return 0.0;
 
-    const auto useHighQuality = factor == highFactor;
-    const auto phases = useHighQuality ? highFactor : normalFactor;
-    const auto taps = useHighQuality ? highTaps : normalTaps;
+    const auto useAnnex = factor == normalFactor;
+    const auto phases = factor == conformanceFactor
+        ? conformanceFactor
+        : (factor == highFactor ? highFactor : normalFactor);
+    const auto taps = useAnnex ? normalTaps : highTaps;
     const auto safePhase = std::clamp(phase, 0, phases - 1);
 
     double value = 0.0;
     for (int tap = 0; tap < taps; ++tap)
     {
-        const auto coefficient = useHighQuality
-            ? highQualityCoefficients[static_cast<std::size_t>(safePhase)][static_cast<std::size_t>(tap)]
+        const auto coefficientPhase = factor == conformanceFactor
+            ? safePhase
+            : (factor == highFactor ? safePhase * 2 : safePhase * 4);
+        const auto coefficient = ! useAnnex
+            ? highQualityCoefficients[static_cast<std::size_t>(coefficientPhase)]
+                                     [static_cast<std::size_t>(tap)]
             : annexCoefficients[static_cast<std::size_t>(safePhase)][static_cast<std::size_t>(tap)];
         value += coefficient * historySample(channel, tap);
+    }
+
+    if (useAnnex)
+    {
+        double conformanceValue = 0.0;
+        const auto highPhase = safePhase * 4;
+        for (int tap = 0; tap < highTaps; ++tap)
+            conformanceValue +=
+                highQualityCoefficients[static_cast<std::size_t>(highPhase)]
+                                       [static_cast<std::size_t>(tap)]
+                * historySample(channel, tap);
+
+        if (std::abs(conformanceValue) > std::abs(value))
+            value = conformanceValue;
     }
 
     return finiteOrZero(value);
@@ -70,12 +90,13 @@ double OversamplingStage::interpolate(int channel, int phase, int factor) const 
 
 void OversamplingStage::buildHighQualityCoefficients() noexcept
 {
-    constexpr auto centre = 15.0;
-    constexpr auto support = 16.0;
+    constexpr auto centre = 31.0;
+    constexpr auto support = 32.0;
 
-    for (int phase = 0; phase < highFactor; ++phase)
+    for (int phase = 0; phase < conformanceFactor; ++phase)
     {
-        const auto fraction = static_cast<double>(phase) / static_cast<double>(highFactor);
+        const auto fraction = static_cast<double>(phase)
+                            / static_cast<double>(conformanceFactor);
         double sum = 0.0;
 
         for (int tap = 0; tap < highTaps; ++tap)

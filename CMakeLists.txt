@@ -42,8 +42,14 @@ target_sources(RemixSafeMaster PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
     Source/DSP/DspUtilities.h
+    Source/DSP/GainComputer.cpp
+    Source/DSP/GainComputer.h
+    Source/DSP/Metering.h
     Source/DSP/OversamplingStage.cpp
     Source/DSP/OversamplingStage.h
+    Source/DSP/SafetyLimiter.cpp
+    Source/DSP/SafetyLimiter.h
+    Source/DSP/SmoothedValue.h
     Source/DSP/TruePeakDetector.cpp
     Source/DSP/TruePeakDetector.h
     Source/Parameters/Parameters.cpp

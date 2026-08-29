@@ -32,10 +32,20 @@
 
 ## D-004 True Peak補間方式
 
-決定: NormalはITU-R BS.1770-5 Annex 2記載の4相48次FIR係数（4 phase × 12 taps）を使用し、Highは32-tap Blackman-windowed sincの8相補間を使用する。
+決定: NormalはITU-R BS.1770-5 Annex 2記載の4相48次FIR係数（4 phase × 12 taps）と64-tap補間の4相検証値の大きい方を使用し、Highは64-tap Blackman-windowed sincの8相補間を使用する。
 
 理由: Normalで規格記載方式との直接対応を保ち、Highでは8xの時間分解能を追加するため。いずれも入力段でsampleを±1へclampしない。
 
 検討した選択肢: Sample Peakのみ、線形補間、JUCE Oversamplingを検証なしでmeterとして流用する。
 
-将来の変更可能性: BS.2217 test materialや外部golden referenceとの比較結果に応じて、Highのtap数・windowまたは検証済みSRC実装へ更新する。
+将来の変更可能性: BS.2217 test materialや外部golden referenceとの比較結果に応じて、windowまたは検証済みSRC実装へ更新する。
+
+## D-005 Ceiling conformance predictor
+
+決定: ユーザー選択のNormal 4x / High 8x detectorとは別に、gain計算専用の16相・64-tap conformance predictorを使用する。内部targetはconfigured Ceilingから0.05 dB guardと、初回conformanceで確定した0.02 dB calibration marginを差し引く。
+
+理由: 4x/8xの離散時点だけではhard-clipped/square-like信号のbandlimited reconstruction peakを16x独立参照に対して最大約0.36 dB under-readしたため。大きな固定marginで全素材を過剰に減衰する代わりに、時間分解能を安全予測だけに追加する。
+
+検討した選択肢: 0.4 dB以上の固定guard、output hard clipper、test許容値の緩和。
+
+将来の変更可能性: 外部規格meterおよびBS.2217 vectorで同等以上の精度を証明できる低CPU方式へ置換可能。16相predictorはユーザー向けquality modeや非線形oversampling処理を意味しない。

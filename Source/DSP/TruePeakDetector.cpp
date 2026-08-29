@@ -12,9 +12,12 @@ void TruePeakDetector::reset() noexcept
 
 void TruePeakDetector::setOversamplingFactor(int newFactor) noexcept
 {
-    oversamplingFactor = newFactor == OversamplingStage::highFactor
-        ? OversamplingStage::highFactor
-        : OversamplingStage::normalFactor;
+    if (newFactor == OversamplingStage::conformanceFactor)
+        oversamplingFactor = OversamplingStage::conformanceFactor;
+    else if (newFactor == OversamplingStage::highFactor)
+        oversamplingFactor = OversamplingStage::highFactor;
+    else
+        oversamplingFactor = OversamplingStage::normalFactor;
 }
 
 TruePeakFrame TruePeakDetector::processFrame(

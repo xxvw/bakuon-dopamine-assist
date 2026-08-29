@@ -1,6 +1,8 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "DSP/Metering.h"
+#include "DSP/SafetyLimiter.h"
 #include "Parameters/Parameters.h"
 
 class RemixSafeMasterAudioProcessor final : public juce::AudioProcessor
@@ -16,6 +18,8 @@ public:
     bool supportsDoublePrecisionProcessing() const override { return true; }
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     void processBlock(juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
+    void processBlockBypassed(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+    void processBlockBypassed(juce::AudioBuffer<double>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
@@ -36,12 +40,15 @@ public:
     void setStateInformation(const void*, int) override;
 
     juce::AudioProcessorValueTreeState parameters;
+    bakuon::dsp::MeterValues getMeterValues() const noexcept { return metering.read(); }
 
 private:
     template <typename SampleType>
-    void process(juce::AudioBuffer<SampleType>& buffer);
+    void process(juce::AudioBuffer<SampleType>& buffer, bool forceBypass);
 
     bakuon::parameters::RawParameterPointers rawParameters;
+    bakuon::dsp::SafetyLimiter limiter;
+    bakuon::dsp::Metering metering;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RemixSafeMasterAudioProcessor)
 };
